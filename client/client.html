@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Example</title>
+</head>
+<body>
+    <ul id="messages"></ul>
+    <input id="message_input" autocomplete="off" /><button onclick="sendMessage()">Send</button>
+
+    <script src="http://localhost:17558/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io("http://localhost:17558");
+        const currentUserId = 'user1';
+
+        function sendMessage() {
+            var message = document.getElementById('message_input').value;
+
+            // Optimistic Update: UI를 먼저 업데이트
+            addMessageToUI(message, true);
+
+            // 서버에 메시지 전송
+            socket.emit('send_message', {message, userId:currentUserId}, response => {
+                if (response.status !== 'ok') {
+                    // 서버 처리 실패 시, 사용자에게 알림
+                    alert('Message failed to send.');
+                    // 실패한 메시지 UI에서 제거 또는 표시 변경
+                }
+            });
+        }
+
+        // 메시지를 UI에 추가하는 함수
+        function addMessageToUI(message, isOptimistic = false) {
+            var messages = document.getElementById('messages');
+            var li = document.createElement('li');
+            li.textContent = message;
+            if (isOptimistic) {
+                li.style.opacity = '0.5'; // 낙관적 업데이트된 메시지는 투명도를 줄여 구분
+            }
+            messages.appendChild(li);
+        }
+
+        // 서버로부터 메시지를 받으면 UI에 추가
+        socket.on('receive_message', function(data) {
+            if (data.userId === currentUserId) {
+                // 투명도를 다시 1로 변경
+                document.getElementById('messages').lastChild.style.opacity = '1';
+                return;
+            }
+            addMessageToUI(data.message);
+        });
+    </script>
+</body>
+</html>
